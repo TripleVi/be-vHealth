@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import userRouter from "./routes/user_router.js";
 import postRouter from "./routes/post_router.js";
 import commentRouter from "./routes/comment_router.js";
+import friendRouter from "./routes/friend_router.js";
 import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
 import StorageService from './services/storage_service.js';
@@ -12,6 +13,7 @@ app.use(bodyParser.json())
 app.use('/api/v1/users', userRouter)
 app.use('/api/v1/posts', postRouter)
 app.use('/api/v1/comments', commentRouter)
+app.use('/api/v1/friends', friendRouter)
 
 const firebaseConfig = {
   apiKey: 'AIzaSyDDKrZ2yYb6Bujlnk7oIs_BlLXd7z11JYI',

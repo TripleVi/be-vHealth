@@ -20,7 +20,6 @@ class PostRepo {
                 LIMIT 5`,
                 { uidParam: uid },
             )
-            console.log(result.records[0].get('record')['properties'])
             return result.records.map(r => {
                 const post = Post.fromNeo4j(r.get('post')['properties'])
                 post.record = ActivityRecord.fromNeo4j(r.get('record')['properties'])
@@ -91,7 +90,6 @@ class PostRepo {
     }
 
     async createPostFiles({postId, photos, mapUrl}) {
-        console.log(photos)
         const session = this.#driver.session()
         try {
             const neo4jPhotos = photos.map(p => p.toNeo4j())
@@ -198,15 +196,153 @@ class PostRepo {
         }
     }
 
-    async countPostComments(postId) {
+    async getUserReactions(postId) {
         const session = this.#driver.session()
         try {
             const result = await session.run(`
-                MATCH (:Post {pid: $pidParam})-[r:COMMENTED_BY]->(:Comment)
-                RETURN count(r) AS comments`,
+                MATCH (:Post {pid: $pidParam})-[:LIKED_BY]->(user:User)
+                RETURN user
+                LIMIT 20`,
                 { pidParam: postId },
             )
+            return result.records.map(r => {
+                const userNeo4j = r.get('user')['properties']
+                return {
+                    'uid': userNeo4j.uid,
+                    'username': userNeo4j.username,
+                    'firstName': userNeo4j.firstName,
+                    'lastName': userNeo4j.lastName,
+                    'avatarUrl': userNeo4j.avatarUrl,
+                }
+            })
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async countComments(postId, path) {
+        const session = this.#driver.session()
+        try {
+            //? count all comments
+            if(path == undefined) {
+                const result = await session.run(`
+                    MATCH (:Post {pid: $pidParam})-[r:COMMENTED_BY]->(:Comment)
+                    RETURN count(r) AS comments`,
+                    { pidParam: postId },
+                )
+                return result.records[0].get('comments')['low']
+            }
+            //? count independent comments
+            if(path.length === 0) {
+                const result = await session.run(`
+                    MATCH (:Post {pid: $pidParam})-[r:COMMENTED_BY]->(comment:Comment)
+                    WHERE NOT (comment)-[:REPLIED_FOR]->(:Comment)
+                    RETURN count(r) AS comments`,
+                    { pidParam: postId },
+                )
+                return result.records[0].get('comments')['low']
+            }
+            //? count dependent comments with a given path
+            const result = await session.run(`
+                MATCH (:Post {pid: $pidParam})-[r:COMMENTED_BY]->(comment:Comment)
+                WHERE comment.path CONTAINS $pathParam
+                RETURN count(r) AS comments`,
+                { pidParam: postId, pathParam: path },
+            )
             return result.records[0].get('comments')['low']
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async getIndependentComments(postId, lessThanDate) {
+        const session = this.#driver.session()
+        try {
+            //? Comments without parent
+            let result
+            if(lessThanDate == undefined) {
+                result = await session.run(`
+                    MATCH (:Post {pid: $pidParam})-[:COMMENTED_BY]->(comment:Comment)<-[:COMMENTED]-(user:User)
+                    WHERE NOT (comment)-[:REPLIED_FOR]->(:Comment)
+                    RETURN comment, user
+                    ORDER BY comment.createdDate DESC
+                    LIMIT 15`,
+                    { pidParam: postId },
+                )
+            }else {
+                result = await session.run(`
+                    MATCH (:Post {pid: $pidParam})-[:COMMENTED_BY]->(comment:Comment)<-[:COMMENTED]-(user:User)
+                    WHERE NOT (comment)-[:REPLIED_FOR]->(:Comment) AND comment.createdDate < $dateParam
+                    RETURN comment, user
+                    ORDER BY comment.createdDate DESC
+                    LIMIT 15`,
+                    { pidParam: postId, dateParam: parseInt(lessThanDate) },
+                )
+            }
+            return result.records.map(r => {
+                const comment = Comment.fromNeo4j(r.get('comment')['properties'])
+                const userNeo4j = r.get('user')['properties']
+                comment.author = {
+                    'username': userNeo4j.username,
+                    'avatarUrl': userNeo4j.avatarUrl,
+                }
+                return comment
+            })
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async getDependentComments({postId, path, lessThanDate}) {
+        const session = this.#driver.session()
+        try {
+            //? Comments with path
+            let result
+            if(lessThanDate == undefined) {
+                result = await session.run(`
+                    MATCH (:Post {pid: $pidParam})-[:COMMENTED_BY]->(comment:Comment)
+                    WHERE comment.path CONTAINS $pathParam
+                    MATCH (author:User)-[:COMMENTED]->(comment)-[:REPLIED_FOR]->(replyTo:Comment)<-[:COMMENTED]-(user:User)
+                    RETURN comment, author, replyTo, user
+                    ORDER BY comment.createdDate ASC
+                    LIMIT 5`,
+                    { pidParam: postId, pathParam: path },
+                )
+            }else {
+                result = await session.run(`
+                    MATCH (:Post {pid: $pidParam})-[:COMMENTED_BY]->(comment:Comment)
+                    WHERE comment.path CONTAINS $pathParam AND comment.createdDate > $dateParam
+                    MATCH (author:User)-[:COMMENTED]->(comment)-[:REPLIED_FOR]->(replyTo:Comment)<-[:COMMENTED]-(user:User)
+                    RETURN comment, author, replyTo, user
+                    ORDER BY comment.createdDate ASC
+                    LIMIT 5`,
+                    { pidParam: postId, pathParam: path, dateParam: parseInt(lessThanDate) },
+                )
+            }
+            return result.records.map(r => {
+                const comment = Comment.fromNeo4j(r.get('comment')['properties'])
+                const authorNeo4j = r.get('author')['properties']
+                const replyToNeo4j = r.get('replyTo')['properties']
+                const userNeo4j = r.get('user')['properties']
+                comment.author = {
+                    'username': authorNeo4j.username,
+                    'avatarUrl': authorNeo4j.avatarUrl,
+                }
+                comment.replyTo = {
+                    'cid': replyToNeo4j.cid,
+                    'path': replyToNeo4j.path,
+                }
+                comment.replyTo.author = {
+                    'username': userNeo4j.username,
+                }
+                return comment
+            })
         } catch (error) {
             throw error
         } finally {
@@ -218,6 +354,9 @@ class PostRepo {
         const session = this.#driver.session()
         const txc = session.beginTransaction()
         try {
+            comment.path = comment.replyTo == undefined 
+                ? comment.cid 
+                : `${comment.replyTo.path}/${comment.cid}`
             const neo4jComment = comment.toNeo4j()
             const result = await txc.run(`
                 MATCH (u:User {uid: $uidParam})
@@ -228,16 +367,16 @@ class PostRepo {
             )
             const createdComment = result.records[0].get('comment')['properties']
             const data = Comment.fromNeo4j(createdComment)
-            if(comment.parent != undefined) {
+            if(comment.replyTo != undefined) {
                 const result = await txc.run(`
-                    MATCH (parent:Comment {cid: $pCidParam})
+                    MATCH (replyTo:Comment {cid: $pCidParam})
                     MATCH (child:Comment {cid: $cCidParam})
-                    CREATE (child)-[:REPLIED_FOR]->(parent)
-                    RETURN parent`,
-                    { pCidParam: comment.parent.cid, cCidParam: createdComment.cid },
+                    CREATE (child)-[:REPLIED_FOR]->(replyTo)
+                    RETURN replyTo`,
+                    { pCidParam: comment.replyTo.cid, cCidParam: createdComment.cid },
                 )
-                const parentComment = result.records[0].get('parent')['properties']
-                data.parent = Comment.fromNeo4j(parentComment)
+                const replyTo = result.records[0].get('replyTo')['properties']
+                data.replyTo = Comment.fromNeo4j(replyTo)
             }
             await txc.commit()
             console.log('committed')

@@ -56,4 +56,13 @@ export const commentProps = {
     cid: "cid",
     content: "content",
     createdDate: "createdDate",
+    path: "path",
+}
+
+export const friendProps = {
+    uid: "uid",
+    username: "username",
+    firstName: "firstName",
+    lastName: "lastName",
+    avatarUrl: "avatarUrl",
 }

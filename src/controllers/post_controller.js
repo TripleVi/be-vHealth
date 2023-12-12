@@ -149,12 +149,46 @@ class PostController {
         }
     }
 
-    async countPostComments(req, res) {
+    async fetchUserReactions(req, res) {
         try {
             const postId = req.params.id
             const repo = new PostRepo()
-            const comments = await repo.countPostComments(postId)
+            const reactions = await repo.getUserReactions(postId)
+            res.send(reactions)
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
+
+    async countComments(req, res) {
+        try {
+            const postId = req.params.id
+            const path = req.query.path
+            const repo = new PostRepo()
+            const comments = await repo.countComments(postId, path)
             res.send({ comments })
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
+
+    async fetchComments(req, res) {
+        try {
+            const postId = req.params.id
+            const path = req.query.path
+            const lessThanDate = req.query.lessThanDate
+            const repo = new PostRepo()
+            let comments
+            if(path == undefined) {
+                comments = await repo.getIndependentComments(postId, lessThanDate)
+            }else {
+                comments = await repo.getDependentComments({
+                    postId, path, lessThanDate,
+                })
+            }
+            res.send(comments)
         } catch (error) {
             console.log(error)
             res.sendStatus(500)
@@ -167,10 +201,9 @@ class PostController {
             const postId = req.params.id
             const json = req.body
             const comment = Comment.fromJson(json)
-            if(json.parent != undefined) {
-                comment.parent = Comment.fromJson(json.parent)
+            if(json.replyTo != undefined) {
+                comment.replyTo = Comment.fromJson(json.replyTo)
             }
-            console.log(comment)
             const repo = new PostRepo()
             const createdComment = await repo.createComment({
                 comment, postId, uid
