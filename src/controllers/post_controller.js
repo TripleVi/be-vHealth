@@ -60,7 +60,7 @@ class PostController {
                 photoUrls.push(photoUrl)
             }
             photos = coordinates.points
-                .map((c, i) => new Photo(c.latitude, c.longitude, photoUrls[i]));
+                .map((c, i) => new Photo.generate(c.latitude, c.longitude, photoUrls[i]));
         }
         const mapUrl = await service.upload({ file: mapFile, username, postId })
         const repo = new PostRepo()
@@ -222,6 +222,18 @@ class PostController {
             const repo = new PostRepo()
             const result = await repo.deleteComment({ commentId, uid })
             res.sendStatus(result == undefined ? 200 : 201)
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
+
+    async getPostMap(req, res) {
+        try {
+            const postId = req.params.id
+            const repo = new PostRepo()
+            const data = await repo.getPostMap(postId)
+            res.send(data)
         } catch (error) {
             console.log(error)
             res.sendStatus(500)

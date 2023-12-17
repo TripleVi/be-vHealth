@@ -8,6 +8,40 @@ class FriendRepo {
         this.#driver = Neo4jService.instance.driver
     }
 
+    async getFriends(uid, username) {
+        const session = this.#driver.session()
+        try {
+            let result
+            if(username == undefined) {
+                result = await session.run(`
+                    MATCH (friend:User)
+                    RETURN friend`,
+                )
+            }else {
+                result = await session.run(`
+                    MATCH (user:User {uid: $uidParam})
+                    MATCH (friend:User)
+                    WHERE NOT friend.uid = user.uid AND friend.username CONTAINS $usernameParam
+                    OPTIONAL MATCH (user)-[r:IS_FOLLOWING]->(friend)
+                    OPTIONAL MATCH (user)-[:IS_FOLLOWING]->(mutual:User)<-[:IS_FOLLOWING]-(friend)
+                    RETURN friend, r, count(mutual) AS mutual`,
+                    { uidParam: uid, usernameParam: username }
+                )
+            }
+            return result.records.map(r => {
+                const friend = Friend.fromNeo4j(r.get('friend')['properties'])
+                friend.isFollowing = r.get('r') != null
+                friend.mutual = r.get('mutual')['low']
+                console.log(friend)
+                return friend
+            })
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
     async getFollowings(uid) {
         const session = this.#driver.session()
         try {
@@ -37,6 +71,22 @@ class FriendRepo {
             return result.records.map(r => 
                 Friend.fromNeo4j(r.get('follower')['properties'])
             )
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async countMutual(uid, friendId) {
+        const session = this.#driver.session()
+        try {
+            const result = await session.run(`
+                MATCH (:User {uid: $uidParam})-[:IS_FOLLOWING]->(mutual:User)<-[:IS_FOLLOWING]-(:User {uid: $fidParam})
+                RETURN count(mutual) AS mutual`,
+                { uidParam: uid, fidParam: friendId }
+            )
+            return result.records[0].get('mutual')['low']
         } catch (error) {
             throw error
         } finally {

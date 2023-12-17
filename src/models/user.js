@@ -11,11 +11,6 @@ class User {
         this.height = height
         this.avatarUrl = avatarUrl
     }
-
-    // static generate(username, email, firstName, lastName, dateOfBirth, gender, weight, height, avatarUrl) {
-    //     const uid = generateId()
-    //     return new User(uid, username, email, firstName, lastName, dateOfBirth, gender, weight, height, avatarUrl)
-    // }
 }
 
 export default User

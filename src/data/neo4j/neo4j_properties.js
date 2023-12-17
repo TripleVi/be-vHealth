@@ -24,6 +24,7 @@ export const postProps = {
 }
 
 export const recordProps = {
+    category: "category",
     startDate: "startDate",
     endDate: "endDate",
     workoutDuration: "workoutDuration",

@@ -3,6 +3,19 @@ import Friend from "../models/friend.js";
 
 class FriendController {
     
+    async getFriends(req, res) {
+        try {
+            const uid = req.headers.uid
+            const username = req.query.username
+            const repo = new FriendRepo()
+            const friends = await repo.getFriends(uid, username)
+            res.send(friends)
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
+    
     async getFollowings(req, res) {
         try {
             const uid = req.params.id

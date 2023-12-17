@@ -1,12 +1,14 @@
 import { friendProps } from "../data/neo4j/neo4j_properties.js";
 
 class Friend {
-    constructor(uid, username, firstName, lastName, avatarUrl) {
+    constructor(uid, username, firstName, lastName, avatarUrl, isFollowing, mutual) {
         this.uid = uid
         this.username = username
         this.firstName = firstName
         this.lastName = lastName
         this.avatarUrl = avatarUrl
+        this.isFollowing = isFollowing
+        this.mutual = mutual
     }
 
     static fromJson(json) {

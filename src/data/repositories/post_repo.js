@@ -2,6 +2,8 @@ import Neo4jService from "../neo4j/neo4j_service.js";
 import Post from "../../models/post.js";
 import Comment from "../../models/comment.js";
 import ActivityRecord from "../../models/activity_record.js";
+import Photo from "../../models/photo.js";
+import Coordinate from "../../models/coordinate.js";
 
 class PostRepo {
     #driver
@@ -14,17 +16,50 @@ class PostRepo {
         const session = this.#driver.session()
         try {
             const result = await session.run(`
-                MATCH (:User {uid: $uidParam})-[:CREATED_POST]->(post:Post)-[:RECORDS]->(record:ActivityRecord)
-                RETURN post, record
+                MATCH (author:User {uid: $uidParam})-[:CREATED_POST]->(post:Post)-[:RECORDS]->(record:ActivityRecord)
+                RETURN author, post, record
                 ORDER BY post.createdDate DESC
                 LIMIT 5`,
                 { uidParam: uid },
             )
             return result.records.map(r => {
                 const post = Post.fromNeo4j(r.get('post')['properties'])
+                const author = r.get('author')['properties']
+                post.author = {
+                    'uid': author.uid,
+                    'username': author.username,
+                    'firstName': author.firstName,
+                    'lastName': author.lastName,
+                    'avatarUrl': author.avatarUrl,
+                }
                 post.record = ActivityRecord.fromNeo4j(r.get('record')['properties'])
                 return post
             })
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async getPostMap(postId) {
+        const session = this.#driver.session()
+        try {
+            const result = await session.run(`
+                MATCH (:Post {pid: $pidParam})-[:RECORDS]->(record:ActivityRecord)
+                MATCH (coordinate:Coordinate)<-[:HOLDS_COORDINATES]-(record)-[:HOLDS_PHOTO]->(photo:Photo)
+                RETURN coordinate, collect(photo) as photos`,
+                { pidParam: postId },
+            )
+            const points = result.records[0].get('coordinate')['properties']['points']
+            const coordinates = []
+            for (let i = 0; i < points.length; i+=2) {
+                coordinates.push(new Coordinate(points[i], points[i+1]))
+            }
+            const photos = result.records[0].get('photos').map(
+                p => Photo.fromNeo4j(p['properties'])
+            )
+            return { coordinates, photos }
         } catch (error) {
             throw error
         } finally {

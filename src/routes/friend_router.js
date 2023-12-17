@@ -4,6 +4,7 @@ import friendController from "../controllers/friend_controller.js";
 
 const router = express.Router()
 
+router.get('/', friendController.getFriends)
 router.get('/followings/:id', friendController.getFollowings)
 router.get('/followings/:id/count', friendController.countFollowings)
 router.get('/followers/:id', friendController.getFollowers)

@@ -1,7 +1,7 @@
 import { postProps } from "../data/neo4j/neo4j_properties.js";
 
 class Post {
-    constructor(pid, title, content, createdDate, privacy, latitude, longitude, mapUrl, record, reactions, user) {
+    constructor(pid, title, content, createdDate, privacy, latitude, longitude, mapUrl, record, reactions, author) {
         this.pid = pid
         this.title = title
         this.content = content
@@ -12,7 +12,7 @@ class Post {
         this.mapUrl = mapUrl
         this.record = record
         this.reactions = reactions
-        this.user = user
+        this.author = author
     }
 
     static fromJson(json) {
