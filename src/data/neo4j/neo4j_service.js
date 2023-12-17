@@ -24,9 +24,10 @@ class Neo4jService {
     }
 
     #createDriver() {
-        const url = 'bolt://localhost:7687'
+        const url = 'neo4j+s://897417de.databases.neo4j.io'
+        // const url = 'bolt://localhost:7687'
         const username = 'neo4j'
-        const password = '0365466031'
+        const password = '8dZ5aKvfqwvu8Jye2BbTGQEBBzDvOqYHnomp83MJXJo'
         return neo4j.driver(
             url,
             neo4j.auth.basic(username, password),
