@@ -60,7 +60,7 @@ class PostController {
                 photoUrls.push(photoUrl)
             }
             photos = coordinates.points
-                .map((c, i) => new Photo.generate(c.latitude, c.longitude, photoUrls[i]));
+                .map((c, i) => Photo.generate(c.latitude, c.longitude, photoUrls[i]));
         }
         const mapUrl = await service.upload({ file: mapFile, username, postId })
         const repo = new PostRepo()
