@@ -14,6 +14,10 @@ class PostController {
             const uid = req.headers.uid
             const repo = new PostRepo()
             const posts = await repo.getPosts(uid)
+
+            const userRepo = new UserRepo()
+            
+
             res.send(posts)
         } catch (error) {
             console.log(error)

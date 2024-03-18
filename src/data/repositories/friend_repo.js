@@ -8,6 +8,8 @@ class FriendRepo {
         this.#driver = Neo4jService.instance.driver
     }
 
+    
+
     async getFriends(uid, username) {
         const session = this.#driver.session()
         try {

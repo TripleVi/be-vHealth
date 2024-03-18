@@ -5,14 +5,14 @@ class UserController {
     async getUsers(req, res) {
         const userRepo = new UserRepo()
         const options = req.query
-        try {
+        // try {
             const users = await userRepo.getUsers(options)
             const data = users.map(u => new UserResponseDto(u))
             res.send(data)
-        } catch (error) {
-            console.log(error)
-            res.sendStatus(500)
-        }
+        // } catch (error) {
+        //     console.log(error)
+        //     res.sendStatus(500)
+        // }
     }
 
     async getUserById(req, res) {
@@ -31,14 +31,14 @@ class UserController {
     async createUser(req, res) {
         const userRepo = new UserRepo()
         const newUser = new UserCreationDto(req.body).toUser()
-        try {
+        // try {
             const createdUser = await userRepo.createUser(newUser)
             const data = new UserResponseDto(createdUser)
             res.status(201).send(data)
-        } catch (error) {
-            console.log(error)
-            res.sendStatus(500)
-        }
+        // } catch (error) {
+        //     console.log(error)
+        //     res.sendStatus(500)
+        // }
     }
 
     async deleteUser(req, res) {

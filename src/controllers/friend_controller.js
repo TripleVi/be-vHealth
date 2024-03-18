@@ -1,15 +1,32 @@
 import FriendRepo from "../data/repositories/friend_repo.js";
 import Friend from "../models/friend.js";
+import { createClient } from 'redis';
 
 class FriendController {
     
     async getFriends(req, res) {
         try {
+            // const uid = req.headers.uid
+            // const username = req.query.username
+            // const repo = new FriendRepo()
+            // const friends = await repo.getFriends(uid, username)
+            // res.send(friends)
+
             const uid = req.headers.uid
             const username = req.query.username
             const repo = new FriendRepo()
-            const friends = await repo.getFriends(uid, username)
-            res.send(friends)
+            const followings = await repo.getFollowings(uid)
+
+            const client = await createClient()
+                .on('error', err => console.log('Redis Client Error', err))
+                .connect();
+
+                await client.set('key', 'value');
+                const value = await client.get('key');
+                
+                await client.disconnect();
+
+            res.send(followings)
         } catch (error) {
             console.log(error)
             res.sendStatus(500)
