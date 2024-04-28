@@ -1,12 +1,14 @@
-import Post from "../models/post.js";
-import Coordinate from "../models/coordinate.js";
-import Record from "../models/activity_record.js";
-import Data from "../models/workout_data.js";
-import Photo from "../models/photo.js";
-import PostRepo from "../data/repositories/post_repo.js";
-import StorageService from "../services/storage_service.js"
-import UserRepo from "../data/repositories/user_repo.js";
-import Comment from "../models/comment.js";
+import Post from '../models/post.js';
+import Coordinate from '../models/coordinate.js';
+import Record from '../models/activity_record.js';
+import Data from '../models/workout_data.js';
+import Photo from '../models/photo.js';
+import PostRepo from '../data/repositories/post_repo.js';
+import StorageService from '../services/storage_service.js'
+import UserRepo from '../data/repositories/user_repo.js';
+import Comment from '../models/comment.js';
+import FeedService from '../services/feed_service.js';
+import WorkoutData from '../models/workout_data.js';
 
 class PostController {
     async fetchPosts(req, res) {
@@ -14,10 +16,6 @@ class PostController {
             const uid = req.headers.uid
             const repo = new PostRepo()
             const posts = await repo.getPosts(uid)
-
-            const userRepo = new UserRepo()
-            
-
             res.send(posts)
         } catch (error) {
             console.log(error)
@@ -39,10 +37,17 @@ class PostController {
             const post = Post.fromJson(json)
             post.record = Record.fromJson(json.record)
             post.record.coordinates = json.record.coordinates.map(Coordinate.fromJson)
-            post.record.data = json.record.data.map(Data.fromJson)
+            post.record.data = WorkoutData.fromJson(json.record.data)
+            
             const repo = new PostRepo()
             const createdPost = await repo.createPost(post, uid)
             res.status(201).send(createdPost)
+            
+            // Fan-out write
+            // const service = new FeedService()
+            // const result = await service.feedPublishing(uid, createdPost)
+
+            // res.status(201).send(createdPost)
         } catch (error) {
             console.log(error)
             res.sendStatus(500)
@@ -52,20 +57,22 @@ class PostController {
     async uploadPostFiles(req, res) {
         const postId = req.params.id
         const username = req.headers.username
-        const coordinates = JSON.parse(req.body.coordinates)
-        const photoFiles = req.files.photos
         const mapFile = req.files.mapImg[0]
-        let photos = []
+        const photoFiles = req.files.photos
         const service = new StorageService()
-        if(req.files.photos != undefined) {
+        let photos = []
+        if(photoFiles != undefined) {
+            const coordinates = JSON.parse(req.body.coordinates)
+            console.log(coordinates)
             const photoUrls = []
             for (const file of photoFiles) {
                 const photoUrl = await service.upload({ file, username, postId })
                 photoUrls.push(photoUrl)
             }
-            photos = coordinates.points
-                .map((c, i) => Photo.generate(c.latitude, c.longitude, photoUrls[i]));
+            photos = coordinates.points.map((c, i) => 
+                    Photo.generate(c.latitude, c.longitude, photoUrls[i]));
         }
+        console.log(photos)
         const mapUrl = await service.upload({ file: mapFile, username, postId })
         const repo = new PostRepo()
         await repo.createPostFiles({ postId, photos, mapUrl })
@@ -92,7 +99,7 @@ class PostController {
         //     res.end('cc');
         //     }, 15000)
         // res.setHeader("Content-Type", "application/json")
-        res.send({slogan: "hello world"})
+        res.status(201).send({message: "hello world"})
     }
 
     async deletePost(req, res) {
@@ -232,11 +239,17 @@ class PostController {
         }
     }
 
-    async getPostMap(req, res) {
+    async fetchPostDetails(req, res) {
         try {
             const postId = req.params.id
             const repo = new PostRepo()
-            const data = await repo.getPostMap(postId)
+            const flag = await repo.postExists(postId);
+            if(!flag) {
+                return res.status(404).send({
+                    message: 'No post exists.',
+                })
+            }
+            const data = await repo.getPostDetails(postId)
             res.send(data)
         } catch (error) {
             console.log(error)

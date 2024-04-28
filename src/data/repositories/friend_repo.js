@@ -8,8 +8,6 @@ class FriendRepo {
         this.#driver = Neo4jService.instance.driver
     }
 
-    
-
     async getFriends(uid, username) {
         const session = this.#driver.session()
         try {
@@ -34,7 +32,6 @@ class FriendRepo {
                 const friend = Friend.fromNeo4j(r.get('friend')['properties'])
                 friend.isFollowing = r.get('r') != null
                 friend.mutual = r.get('mutual')['low']
-                console.log(friend)
                 return friend
             })
         } catch (error) {

@@ -4,6 +4,7 @@ import Comment from "../../models/comment.js";
 import ActivityRecord from "../../models/activity_record.js";
 import Photo from "../../models/photo.js";
 import Coordinate from "../../models/coordinate.js";
+import WorkoutData from "../../models/workout_data.js";
 
 class PostRepo {
     #driver
@@ -17,7 +18,7 @@ class PostRepo {
         try {
             const result = await session.run(`
                 MATCH (author:User {uid: $uidParam})-[:CREATED_POST]->(post:Post)-[:RECORDS]->(record:ActivityRecord)
-                RETURN author, post, record
+                RETURN author, post {.*, createdDate: toString(post.createdDate)}, record
                 ORDER BY post.createdDate DESC
                 LIMIT 5`,
                 { uidParam: uid },
@@ -42,24 +43,28 @@ class PostRepo {
         }
     }
 
-    async getPostMap(postId) {
+    async getMostPopularPosts() {
         const session = this.#driver.session()
         try {
             const result = await session.run(`
-                MATCH (:Post {pid: $pidParam})-[:RECORDS]->(record:ActivityRecord)
-                MATCH (coordinate:Coordinate)<-[:HOLDS_COORDINATES]-(record)-[:HOLDS_PHOTO]->(photo:Photo)
-                RETURN coordinate, collect(photo) as photos`,
-                { pidParam: postId },
+                MATCH (author:User)-[:CREATED_POST]->(post:Post)-[r:LIKED_BY]->(:User)
+                RETURN author, post, count(r) AS likes
+                ORDER BY likes DESC
+                LIMIT 5`,
             )
-            const points = result.records[0].get('coordinate')['properties']['points']
-            const coordinates = []
-            for (let i = 0; i < points.length; i+=2) {
-                coordinates.push(new Coordinate(points[i], points[i+1]))
-            }
-            const photos = result.records[0].get('photos').map(
-                p => Photo.fromNeo4j(p['properties'])
-            )
-            return { coordinates, photos }
+            return result.records.map(r => {
+                const post = Post.fromNeo4j(r.get('post')['properties'])
+                const author = r.get('author')['properties']
+                post.author = {
+                    'uid': author.uid,
+                    'username': author.username,
+                    'firstName': author.firstName,
+                    'lastName': author.lastName,
+                    'avatarUrl': author.avatarUrl,
+                }
+                post.record = ActivityRecord.fromNeo4j(r.get('record')['properties'])
+                return post
+            })
         } catch (error) {
             throw error
         } finally {
@@ -67,13 +72,48 @@ class PostRepo {
         }
     }
 
-    async postExists(postId, uid) {
+    async getPostDetails(postId) {
+        const session = this.#driver.session()
+        try {
+            const data = {}
+            const result = await session.run(`
+                MATCH (:Post {pid: $pidParam})-[:RECORDS]->(record:ActivityRecord)
+                MATCH (record)-[:HOLDS_DATA]->(data:WorkoutData)
+                OPTIONAL MATCH (record)-[:HOLDS_COORDINATES]->(coordinate:Coordinate)
+                OPTIONAL MATCH (record)-[:HOLDS_PHOTO]->(photo:Photo)
+                RETURN data, coordinate, photo`,
+                { pidParam: postId },
+            )
+            data['data'] = WorkoutData
+                    .fromNeo4j(result.records[0].get('data')['properties']).toJson()
+            if(result.records[0].get('coordinate')) {
+                const points = result
+                        .records[0].get('coordinate')['properties']['points']
+                const coordinates = []
+                for (let i = 0; i < points.length; i+=2) {
+                    coordinates.push(new Coordinate(points[i], points[i+1]))
+                }
+                data['coordinates'] = coordinates
+            }
+            if(result.records[0].get('photo')) {
+                data['photos'] = result.records[0].get('photos')
+                        .map(p => Photo.fromNeo4j(p['properties']))
+            }
+            return data
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async postExists(postId) {
         const session = this.#driver.session()
         try {
             const result = await session.run(`
-                MATCH (:User {uid: $uidParam})-[:CREATED_POST]->(post:Post {pid: $pidParam})
+                MATCH (post:Post {pid: $pidParam})
                 RETURN post`,
-                { uidParam: uid, pidParam: postId },
+                { pidParam: postId },
             )
             return result.records.length === 1
         } catch (error) {
@@ -96,22 +136,17 @@ class PostRepo {
             }
             const neo4jPost = post.toNeo4j()
             const neo4jRecord = post.record.toNeo4j()
-            const neo4jData = post.record.data.map(d => d.toNeo4j())
-
+            const neo4jData = post.record.data.toNeo4j()
+            
             const result = await txc.run(`
                 MATCH (u:User {uid: $uidParam})
-                CREATE (u)-[:CREATED_POST]->(post:Post $pProps)-[:RECORDS]->(:ActivityRecord $rProps)-[:HOLDS_COORDINATES]->(:Coordinate {points: $cProps})
+                CREATE (u)-[:CREATED_POST]->(post:Post $pProps)-[:RECORDS]->(record:ActivityRecord $rProps)-[:HOLDS_COORDINATES]->(:Coordinate {points: $cProps}), (record)-[:HOLDS_DATA]->(:WorkoutData $wProps)
+                SET post.createdDate = datetime($dateParam)
                 RETURN post`,
-                { uidParam: uid, pProps: neo4jPost, rProps: neo4jRecord, cProps: coordinates },
+                { uidParam: uid, pProps: neo4jPost, rProps: neo4jRecord, cProps: coordinates, wProps: neo4jData, dateParam: neo4jPost.createdDate },
             )
             const createdNeo4jPost = result.records[0].get('post')['properties']
-            await txc.run(`
-                MATCH (:Post {pid: $pidParam})-[:RECORDS]->(record:ActivityRecord)
-                UNWIND $eventsParams AS event
-                CREATE (record)-[:HOLDS_WORKOUT_DATA]->(wData:WorkoutData)
-                SET wData = event`,
-                { pidParam: createdNeo4jPost.pid, eventsParams: neo4jData },
-            )
+            createdNeo4jPost.createdDate = neo4jPost.createdDate
             await txc.commit()
             console.log('committed')
             return Post.fromNeo4j(createdNeo4jPost)

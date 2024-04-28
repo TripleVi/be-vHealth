@@ -28,7 +28,6 @@ const fbApp = initializeApp(firebaseConfig)
 const storage = getStorage(fbApp)
 StorageService.init(storage)
 
-
 const port = process.env.PORT || 3000
 app.listen(port, () => {
     console.log(`Server is running at port ${port}`)    

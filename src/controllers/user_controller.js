@@ -1,5 +1,5 @@
-import UserRepo from "../data/repositories/user_repo.js";
-import { UserCreationDto, UserResponseDto } from "../utils/dto/user_dto.js";
+import UserRepo from '../data/repositories/user_repo.js';
+import { UserCreationDto, UserResponseDto } from '../utils/dto/user_dto.js';
 
 class UserController {
     async getUsers(req, res) {
@@ -20,6 +20,11 @@ class UserController {
         const userRepo = new UserRepo()
         try {
             const user = await userRepo.getUserById(uid)
+            if(user == null) {
+                return res.status(404).send({
+                    message: 'User not found.',
+                })
+            }
             const data = new UserResponseDto(user)
             res.send(data)
         } catch (error) {
@@ -47,6 +52,18 @@ class UserController {
         try {
             await userRepo.deleteUser(userId)
             res.sendStatus(204)
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
+
+    async updateMetadata(req, res) {
+        try {
+            const uid = req.params.id
+            const userRepo = new UserRepo()
+            const result = await userRepo.updateMetadata(uid, req.body)
+            res.status(201).send(result)
         } catch (error) {
             console.log(error)
             res.sendStatus(500)

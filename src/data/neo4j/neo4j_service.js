@@ -18,7 +18,7 @@ class Neo4jService {
     get driver() {
         if(this.#driver === undefined) {
             this.#driver = this.#createDriver()
-            console.log("Connected to database successfully")
+            console.log("Connected to Neo4j successfully")
         }
         return this.#driver
     }
