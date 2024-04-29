@@ -24,7 +24,7 @@ class PostRepo {
                 { uidParam: uid },
             )
             return result.records.map(r => {
-                const post = Post.fromNeo4j(r.get('post')['properties'])
+                const post = Post.fromNeo4j(r.get('post'))
                 const author = r.get('author')['properties']
                 post.author = {
                     'uid': author.uid,
@@ -43,17 +43,37 @@ class PostRepo {
         }
     }
 
-    async getMostPopularPosts() {
+    async getNewsFeed(uid, viewedPostIds) {
+        const session = this.#driver.session()
+        try {
+            await this.deleteConnections(uid, viewedPostIds)
+            const result = await session.run(`
+                MATCH (user:User {uid: $uidParam})-[:ENGAGES_WITH]->(post)
+                RETURN post.pid as pid
+                ORDER BY post.createdDate DESC
+                LIMIT 10`,
+                { uidParam: uid },
+            )
+            return result.records.map(r => r.get('pid'))
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async getPostsByIds(postIds) {
+        if(postIds.length === 0) return []
         const session = this.#driver.session()
         try {
             const result = await session.run(`
-                MATCH (author:User)-[:CREATED_POST]->(post:Post)-[r:LIKED_BY]->(:User)
-                RETURN author, post, count(r) AS likes
-                ORDER BY likes DESC
-                LIMIT 5`,
+                UNWIND $postIdsParam as pid
+                MATCH (author)-[:CREATED_POST]->(post:Post {pid: pid})-[:RECORDS]->(record)
+                RETURN author, post {.*, createdDate: toString(post.createdDate)}, record`,
+                { postIdsParam: postIds },
             )
             return result.records.map(r => {
-                const post = Post.fromNeo4j(r.get('post')['properties'])
+                const post = Post.fromNeo4j(r.get('post'))
                 const author = r.get('author')['properties']
                 post.author = {
                     'uid': author.uid,
@@ -182,13 +202,15 @@ class PostRepo {
     async deletePost(postId, uid) {
         const session = this.#driver.session()
         try {
-            const result = await session.run(`
+            await session.run(`
                 MATCH (:User {uid: $uidParam})-[:CREATED_POST]->(post:Post {pid: $pidParam})
-                DETACH DELETE post`,
+                MATCH (post)-[:RECORDS]->(record)
+                OPTIONAL MATCH (record)-[:HOLDS_COORDINATES]->(coordinate)
+                OPTIONAL MATCH (record)-[:HOLDS_PHOTOS]->(photo)
+                OPTIONAL MATCH (record)-[:HOLDS_DATA]->(data)
+                DETACH DELETE post, record, coordinate, photo, data`,
                 { uidParam: uid, pidParam: postId },
             )
-            const Neo4jPosts = result.records
-            console.log(Neo4jPosts)
         } catch (error) {
             throw error
         } finally {
@@ -497,15 +519,16 @@ class PostRepo {
     }
 
     async deleteConnections(uid, postIds) {
+        if(postIds.length === 0) return
         const session = this.#driver.session()
         try {
             const results = await session.run(`
                 MATCH (user:User {uid: $uidParam})
-                UNWIND $pIdsParam AS pid
+                UNWIND $postIdsParam AS pid
                 MATCH (user)-[r:ENGAGES_WITH]->(post:Post {pid: pid})
                 DELETE r
                 RETURN count(r) as connections`,
-                { uidParam: uid, pIdsParam: postIds },
+                { uidParam: uid, postIdsParam: postIds },
             )
             return results.records[0].get('connections')['low']
         } catch (error) {

@@ -6,7 +6,6 @@ import PostRepo from '../data/repositories/post_repo.js';
 import StorageService from '../services/storage_service.js'
 import UserRepo from '../data/repositories/user_repo.js';
 import Comment from '../models/comment.js';
-import FeedService from '../services/feed_service.js';
 import WorkoutData from '../models/workout_data.js';
 
 class PostController {
