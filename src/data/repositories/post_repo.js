@@ -476,6 +476,44 @@ class PostRepo {
             session.close()
         }
     }
+
+    async createConnections(uid, postId) {
+        const session = this.#driver.session()
+        try {
+            const results = await session.run(`
+                MATCH (user:User {uid: $uidParam})
+                MATCH (follower:User)-[:IS_FOLLOWING]->(user)
+                MATCH (user)-[:CREATED_POST]->(post:Post {pid: $pidParam})
+                CREATE (follower)-[r:ENGAGES_WITH]->(post)
+                RETURN count(r) AS connections`,
+                { uidParam: uid, pidParam: postId },
+            )
+            return results.records[0].get('connections')['low']
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async deleteConnections(uid, postIds) {
+        const session = this.#driver.session()
+        try {
+            const results = await session.run(`
+                MATCH (user:User {uid: $uidParam})
+                UNWIND $pIdsParam AS pid
+                MATCH (user)-[r:ENGAGES_WITH]->(post:Post {pid: pid})
+                DELETE r
+                RETURN count(r) as connections`,
+                { uidParam: uid, pIdsParam: postIds },
+            )
+            return results.records[0].get('connections')['low']
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
 }
 
 export default PostRepo;

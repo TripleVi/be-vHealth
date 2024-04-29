@@ -1,8 +1,6 @@
 import { userProperties } from '../neo4j/neo4j_properties.js';
 import Neo4jService from '../neo4j/neo4j_service.js';
 import User from '../../models/user.js';
-import UserMetadata from '../../models/user_metadata.js';
-import RedisService from '../redis/redis_service.js';
 
 class UserRepo {
     #driver
@@ -143,16 +141,16 @@ class UserRepo {
         }
     }
 
-    async updateMetadata(uid, data) {
-        const metadata = UserMetadata.fromJson(data)
-        const client = await RedisService.instance.client
-        // Return the number of new key-value pairs
-        await client.hSet(`${uid}:metadata`, {
-            active: `${metadata.active}`,
-            lastActiveTime: metadata.lastActiveTime,
-        })
-        return metadata
-    }
+    // async updateMetadata(uid, data) {
+    //     const metadata = UserMetadata.fromJson(data)
+    //     const client = await RedisService.instance.client
+    //     // Return the number of new key-value pairs
+    //     await client.hSet(`${uid}:metadata`, {
+    //         active: `${metadata.active}`,
+    //         lastActiveTime: metadata.lastActiveTime,
+    //     })
+    //     return metadata
+    // }
 }
 
 export default UserRepo;

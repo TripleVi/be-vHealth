@@ -1,7 +1,6 @@
 import Post from '../models/post.js';
 import Coordinate from '../models/coordinate.js';
 import Record from '../models/activity_record.js';
-import Data from '../models/workout_data.js';
 import Photo from '../models/photo.js';
 import PostRepo from '../data/repositories/post_repo.js';
 import StorageService from '../services/storage_service.js'
@@ -44,10 +43,9 @@ class PostController {
             res.status(201).send(createdPost)
             
             // Fan-out write
+            repo.createConnections(uid, createdPost.pid)
             // const service = new FeedService()
             // const result = await service.feedPublishing(uid, createdPost)
-
-            // res.status(201).send(createdPost)
         } catch (error) {
             console.log(error)
             res.sendStatus(500)
