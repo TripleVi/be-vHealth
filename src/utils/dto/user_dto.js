@@ -6,8 +6,7 @@ class UserResponseDto {
             this.uid = user.uid
             this.username = user.username
             this.email = user.email
-            this.firstName = user.firstName
-            this.lastName = user.lastName
+            this.name = user.name
             this.dateOfBirth = user.dateOfBirth
             this.gender = user.gender
             this.weight = user.weight
@@ -24,8 +23,7 @@ class UserCreationDto {
         this.uid = body["uid"]
         this.username = body["username"]
         this.email = body["email"]
-        this.firstName = body["firstName"]
-        this.lastName = body["lastName"]
+        this.name = body["name"]
         this.dateOfBirth = body["dateOfBirth"]
         this.gender = body["gender"]
         this.weight = body["weight"]
@@ -34,7 +32,7 @@ class UserCreationDto {
     }
 
     toUser() {
-        return new User(this.uid, this.username, this.email, this.firstName, this.lastName, this.dateOfBirth, this.gender, this.weight, this.height, this.avatarUrl)
+        return new User(this.uid, this.username, this.email, this.name, this.dateOfBirth, this.gender, this.weight, this.height, this.avatarUrl)
     }
 }
 

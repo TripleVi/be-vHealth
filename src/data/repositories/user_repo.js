@@ -11,7 +11,7 @@ class UserRepo {
 
     #toUser(neo4jUser) {
         return new User(
-            neo4jUser[userProperties.uid], neo4jUser[userProperties.username], neo4jUser[userProperties.email], neo4jUser[userProperties.firstName], neo4jUser[userProperties.lastName], neo4jUser[userProperties.dateOfBirth], neo4jUser[userProperties.gender], neo4jUser[userProperties.weight], neo4jUser[userProperties.height], neo4jUser[userProperties.avatarUrl],
+            neo4jUser[userProperties.uid], neo4jUser[userProperties.username], neo4jUser[userProperties.email], neo4jUser[userProperties.name], neo4jUser[userProperties.dateOfBirth], neo4jUser[userProperties.gender], neo4jUser[userProperties.weight], neo4jUser[userProperties.height], neo4jUser[userProperties.avatarUrl],
         )
     }
 
@@ -21,8 +21,7 @@ class UserRepo {
         neo4jUser[userProperties.username] = user.username
         neo4jUser[userProperties.password] = user.password
         neo4jUser[userProperties.email] = user.email
-        neo4jUser[userProperties.firstName] = user.firstName
-        neo4jUser[userProperties.lastName] = user.lastName
+        neo4jUser[userProperties.name] = user.name
         neo4jUser[userProperties.dateOfBirth] = user.dateOfBirth
         neo4jUser[userProperties.gender] = user.gender
         neo4jUser[userProperties.weight] = user.weight
@@ -133,6 +132,21 @@ class UserRepo {
                 MATCH (u:User {userId: $userIdParam})
                 SET u.isDeleted = 1`,
                 { userIdParam: userId }
+            )
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async updateProfile(uid, userInfo) {
+        const session = this.#driver.session()
+        try {
+            return await session.run(`
+                MATCH (u:User {uid: $uidParam})
+                SET u.name = $nameParam, u.username = $usernameParam, u.gender = $genderParam, u.weight = $weightParam, u.height = $heightParam`,
+                { uidParam: uid, nameParam: userInfo.name, usernameParam: userInfo.username, genderParam: userInfo.gender, weightParam: userInfo.weight, heightParam: userInfo.height }
             )
         } catch (error) {
             throw error

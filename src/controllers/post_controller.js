@@ -100,6 +100,7 @@ class PostController {
     }
 
     async deletePost(req, res) {
+        // check authorization
         try {
             const uid = req.headers.uid
             const postId = req.params.id
@@ -159,9 +160,10 @@ class PostController {
 
     async fetchUserReactions(req, res) {
         try {
+            const uid = req.headers.uid
             const postId = req.params.id
             const repo = new PostRepo()
-            const reactions = await repo.getUserReactions(postId)
+            const reactions = await repo.getUserReactions(uid, postId)
             res.send(reactions)
         } catch (error) {
             console.log(error)

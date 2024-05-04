@@ -46,6 +46,26 @@ class UserController {
         // }
     }
 
+    async editProfile(req, res) {
+        const userRepo = new UserRepo()
+        const uid = req.params.id
+        const userInfo = req.body
+        console.log(userInfo)
+        try {
+            const flag = await userRepo.userExists(uid)
+            if(!flag) {
+                return res.status(400).send({
+                    message: 'No user exists',
+                })
+            }
+            await userRepo.updateProfile(uid, userInfo)
+            res.sendStatus(204)
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
+
     async deleteUser(req, res) {
         const userRepo = new UserRepo()
         const userId = req.params.id

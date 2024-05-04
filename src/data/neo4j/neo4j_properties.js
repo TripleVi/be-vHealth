@@ -3,8 +3,7 @@ export const userProperties = {
     username: 'username',
     password: 'password',
     email: 'email',
-    firstName: 'firstName',
-    lastName: 'lastName',
+    name: 'name',
     dateOfBirth: 'dateOfBirth',
     gender: 'gender',
     weight: 'weight',
@@ -28,16 +27,13 @@ export const recordProps = {
     category: 'category',
     startDate: 'startDate',
     endDate: 'endDate',
-    workoutDuration: 'workoutDuration',
+    activeTime: 'activeTime',
     distance: 'distance',
     avgSpeed: 'avgSpeed',
     maxSpeed: 'maxSpeed',
     avgPace: 'avgPace',
-    maxPace: 'maxPace',
     steps: 'steps',
-    stairsClimbed: 'stairsClimbed',
     calories: 'calories',
-    mapUrl: 'mapUrl',
 }
 
 export const workoutDataProps = {
@@ -65,7 +61,6 @@ export const commentProps = {
 export const friendProps = {
     uid: 'uid',
     username: 'username',
-    firstName: 'firstName',
-    lastName: 'lastName',
+    name: 'name',
     avatarUrl: 'avatarUrl',
 }
