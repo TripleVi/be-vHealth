@@ -148,25 +148,24 @@ class PostRepo {
                 MATCH (record)-[:HOLDS_DATA]->(data:WorkoutData)
                 OPTIONAL MATCH (record)-[:HOLDS_COORDINATES]->(coordinate:Coordinate)
                 OPTIONAL MATCH (record)-[:HOLDS_PHOTO]->(photo:Photo)
-                RETURN data, coordinate, photo`,
+                RETURN data, coordinate, collect(photo) as photos`,
                 { pidParam: postId },
             )
             data['data'] = WorkoutData
                     .fromNeo4j(result.records[0].get('data')['properties']).toJson()
+            const coordinates = []
             if(result.records[0].get('coordinate')) {
                 const points = result
                         .records[0].get('coordinate')['properties']['points']
-                const coordinates = []
                 for (let i = 0; i < points.length; i+=2) {
                     coordinates.push(new Coordinate(points[i], points[i+1]))
                 }
-                data['coordinates'] = coordinates
             }
-            if(result.records[0].get('photo')) {
-                data['photos'] = result.records[0].get('photos')
-                        .map(p => Photo.fromNeo4j(p['properties']))
-            }
+            data['coordinates'] = coordinates
+            data['photos'] = result.records[0].get('photos')
+                    .map(p => Photo.fromNeo4j(p['properties']))
             return data
+
         } catch (error) {
             throw error
         } finally {
