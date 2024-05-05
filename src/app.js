@@ -10,7 +10,7 @@ import { getStorage } from "firebase/storage";
 import StorageService from './services/storage_service.js';
 
 const app = express()
-app.use(bodyParser.json())
+app.use(bodyParser.json({limit: '50mb'}))
 app.use('/api/v1/users', userRouter)
 app.use('/api/v1/posts', postRouter)
 app.use('/api/v1/comments', commentRouter)

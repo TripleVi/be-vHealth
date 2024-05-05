@@ -31,16 +31,12 @@ export const recordProps = {
     distance: 'distance',
     avgSpeed: 'avgSpeed',
     maxSpeed: 'maxSpeed',
-    avgPace: 'avgPace',
     steps: 'steps',
     calories: 'calories',
 }
 
 export const workoutDataProps = {
-    steps: 'steps',
     speeds: 'speeds',
-    distances: 'distances',
-    calories: 'calories',
     times: 'times',
 }
 

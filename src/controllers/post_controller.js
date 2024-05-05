@@ -25,6 +25,7 @@ class PostController {
         try {
             const uid = req.headers.uid
             const json = req.body
+            console.log(Buffer.byteLength(JSON.stringify(json)))
             const userRepo = new UserRepo()
             const flag = await userRepo.userExists(uid)
             if(!flag) {
