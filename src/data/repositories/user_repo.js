@@ -85,6 +85,59 @@ class UserRepo {
         }
     }
 
+    async getFollowing(uid) {
+        const session = this.#driver.session()
+        try {
+            const result = await session.run(`
+                MATCH (:User {uid: $uidParam})-[:IS_FOLLOWING]->(following)
+                RETURN following
+                LIMIT 30`,
+                { uidParam: uid },
+            )
+            return result.records.map(r => {
+                const userNeo4j = r.get('following')['properties']
+                return {
+                    'uid': userNeo4j.uid,
+                    'username': userNeo4j.username,
+                    'name': userNeo4j.name,
+                    'avatarUrl': userNeo4j.avatarUrl,
+                }
+            })
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
+    async getFollowers(uid) {
+        const session = this.#driver.session()
+        try {
+            const result = await session.run(`
+                MATCH (follower)-[:IS_FOLLOWING]->(user:User {uid: $uidParam})
+                OPTIONAL MATCH (user)-[following:IS_FOLLOWING]->(follower)
+                RETURN follower, following
+                LIMIT 30`,
+                { uidParam: uid },
+            )
+            return result.records.map(r => {
+                const userNeo4j = r.get('follower')['properties']
+                const isFollowing = r.get('following') != null
+                return {
+                    'uid': userNeo4j.uid,
+                    'username': userNeo4j.username,
+                    'name': userNeo4j.name,
+                    'avatarUrl': userNeo4j.avatarUrl,
+                    'isFollowing': isFollowing,
+                }
+            })
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
     async userExists(uid) {
         const session = this.#driver.session()
         try {

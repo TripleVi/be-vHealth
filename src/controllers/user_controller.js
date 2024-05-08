@@ -32,6 +32,42 @@ class UserController {
             res.sendStatus(500)
         }
     }
+
+    async getFollowing(req, res) {
+        const uid = req.params.id
+        const userRepo = new UserRepo()
+        try {
+            const user = await userRepo.getUserById(uid)
+            if(user == null) {
+                return res.status(404).send({
+                    message: 'User not found.',
+                })
+            }
+            const following = await userRepo.getFollowing(uid)
+            res.send(following)
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
+
+    async getFollowers(req, res) {
+        const uid = req.params.id
+        const userRepo = new UserRepo()
+        try {
+            const user = await userRepo.getUserById(uid)
+            if(user == null) {
+                return res.status(404).send({
+                    message: 'User not found.',
+                })
+            }
+            const followers = await userRepo.getFollowers(uid)
+            res.send(followers)
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
     
     async createUser(req, res) {
         const userRepo = new UserRepo()

@@ -7,6 +7,8 @@ const router = express.Router()
 
 router.get('/', userValidators.validateUserOptions, userController.getUsers)
 router.get('/:id', userController.getUserById)
+router.get('/:id/following', userController.getFollowing)
+router.get('/:id/followers', userController.getFollowers)
 router.post('/', userValidators.validateUserCreation, userController.createUser)
 router.put('/:id', userController.editProfile)
 // router.put('/:id', userValidators.validateUserDeletion, userController.deleteUser)

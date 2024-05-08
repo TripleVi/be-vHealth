@@ -42,6 +42,22 @@ class PostRepo {
         }
     }
 
+    async countPosts(uid) {
+        const session = this.#driver.session()
+        try {
+            const result = await session.run(`
+                MATCH (author:User {uid: $uidParam})-[r:CREATED_POST]->(post)
+                RETURN count(r) as total`,
+                { uidParam: uid },
+            )
+            return result.records[0].get('total')['low']
+        } catch (error) {
+            throw error
+        } finally {
+            session.close()
+        }
+    }
+
     async getNewsFeed(uid, viewedPostIds) {
         const session = this.#driver.session()
         try {

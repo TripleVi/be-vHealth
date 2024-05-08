@@ -21,6 +21,18 @@ class PostController {
         }
     }
 
+    async countPosts(req, res) {
+        try {
+            const uid = req.headers.uid
+            const repo = new PostRepo()
+            const total = await repo.countPosts(uid)
+            res.send({ total })
+        } catch (error) {
+            console.log(error)
+            res.sendStatus(500)
+        }
+    }
+
     async createPost(req, res) {
         try {
             const uid = req.headers.uid
