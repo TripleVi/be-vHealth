@@ -18,11 +18,16 @@ class PostRepo {
         try {
             const result = await session.run(`
                 MATCH (author:User {uid: $uidParam})-[:CREATED_POST]->(post:Post)-[:RECORDS]->(record:ActivityRecord)
-                RETURN author, post {.*, createdDate: toString(post.createdDate)}, record
+                OPTIONAL MATCH (post)-[r:LIKED_BY]->(:User)
+                WITH author, post, record, count(r) AS likes
+                OPTIONAL MATCH (post)-[r2:COMMENTED_BY]->(:Comment)
+                WITH author, post, record, likes, count(r2) AS comments
+                RETURN author, post {.*, createdDate: toString(post.createdDate)}, record, likes, comments
                 ORDER BY post.createdDate DESC
-                LIMIT 5`,
+                LIMIT 15`,
                 { uidParam: uid },
             )
+
             return result.records.map(r => {
                 const post = Post.fromNeo4j(r.get('post'))
                 const author = r.get('author')['properties']
@@ -33,6 +38,8 @@ class PostRepo {
                     'avatarUrl': author.avatarUrl,
                 }
                 post.record = ActivityRecord.fromNeo4j(r.get('record')['properties'])
+                post.likes = r.get('likes')['low']
+                post.comments = r.get('comments')['low']
                 return post
             })
         } catch (error) {
