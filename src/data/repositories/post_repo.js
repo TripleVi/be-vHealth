@@ -1,10 +1,11 @@
-import Neo4jService from "../neo4j/neo4j_service.js";
-import Post from "../../models/post.js";
-import Comment from "../../models/comment.js";
-import ActivityRecord from "../../models/activity_record.js";
-import Photo from "../../models/photo.js";
-import Coordinate from "../../models/coordinate.js";
-import WorkoutData from "../../models/workout_data.js";
+import Neo4jService from '../neo4j/neo4j_service.js'
+import Post from '../../models/post.js'
+import Comment from '../../models/comment.js'
+import ActivityRecord from '../../models/activity_record.js'
+import Photo from '../../models/photo.js'
+import Coordinate from '../../models/coordinate.js'
+import WorkoutData from '../../models/workout_data.js'
+import redisService from '../redis/redis_service.js'
 
 class PostRepo {
     #driver
@@ -61,74 +62,6 @@ class PostRepo {
                 { uidParam: uid },
             )
             return result.records[0].get('total')['low']
-        } catch (error) {
-            throw error
-        } finally {
-            session.close()
-        }
-    }
-
-    async getNewsFeed(uid, viewedPostIds) {
-        const session = this.#driver.session()
-        try {
-            const deleted = await this.deleteConnections(uid, viewedPostIds)
-            const result = await session.run(`
-                MATCH (user:User {uid: $uidParam})-[:ENGAGES_WITH]->(post)
-                RETURN post.pid as pid
-                ORDER BY post.createdDate DESC
-                LIMIT 15`,
-                { uidParam: uid },
-            )
-            const postIds = result.records.map(r => r.get('pid'))
-            let cache = await this.getPostCache(uid)
-            if(deleted.length > 0) {
-                const arr = []
-                let i = 0
-                for (; i < 15 && i < deleted.length; i++) {
-                    arr.push(deleted[i])
-                }
-                for (let j = 0; i < 15 && j < cache.length; j++) {
-                    arr.push(cache[j])
-                    i++
-                }
-                cache = arr
-                await this.setPostCache(uid, arr)
-            }
-            if(postIds.length < 15) {
-                postIds.push(...cache)
-            }
-            return postIds
-        } catch (error) {
-            throw error
-        } finally {
-            session.close()
-        }
-    }
-
-    async getPostCache(uid) {
-        const session = this.#driver.session()
-        try {
-            const result = await session.run(`
-                MATCH (user:User {uid: $uidParam})
-                RETURN user.cache AS cache`,
-                { uidParam: uid },
-            )
-            return result.records[0].get('cache') || []
-        } catch (error) {
-            throw error
-        } finally {
-            session.close()
-        }
-    }
-
-    async setPostCache(uid, cache) {
-        const session = this.#driver.session()
-        try {
-            await session.run(`
-                MATCH (user:User {uid: $uidParam})
-                SET user.cache = $cacheParam`,
-                { uidParam: uid, cacheParam: cache },
-            )
         } catch (error) {
             throw error
         } finally {
@@ -572,45 +505,6 @@ class PostRepo {
             session.close()
         }
     }
-
-    async createConnections(uid, postId) {
-        const session = this.#driver.session()
-        try {
-            const results = await session.run(`
-                MATCH (user:User {uid: $uidParam})
-                MATCH (follower:User)-[:IS_FOLLOWING]->(user)
-                MATCH (user)-[:CREATED_POST]->(post:Post {pid: $pidParam})
-                CREATE (follower)-[r:ENGAGES_WITH]->(post)
-                RETURN count(r) AS connections`,
-                { uidParam: uid, pidParam: postId },
-            )
-            return results.records[0].get('connections')['low']
-        } catch (error) {
-            throw error
-        } finally {
-            session.close()
-        }
-    }
-
-    async deleteConnections(uid, postIds) {
-        if(postIds.length === 0) return []
-        const session = this.#driver.session()
-        try {
-            const results = await session.run(`
-                MATCH (user:User {uid: $uidParam})
-                UNWIND $postIdsParam AS pid
-                MATCH (user)-[r:ENGAGES_WITH]->(post:Post {pid: pid})
-                DELETE r
-                RETURN pid`,
-                { uidParam: uid, postIdsParam: postIds },
-            )
-            return results.records.map(e => e.get('pid'))
-        } catch (error) {
-            throw error
-        } finally {
-            session.close()
-        }
-    }
 }
 
-export default PostRepo;
+export default PostRepo

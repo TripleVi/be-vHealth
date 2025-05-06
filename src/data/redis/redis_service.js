@@ -14,6 +14,7 @@ function initClient() {
 async function getClient() {
     if(client === undefined) {
         client = await initClient()
+        client.multi().exec()
     }
     return client
 }

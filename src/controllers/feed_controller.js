@@ -1,4 +1,4 @@
-import PostRepo from '../data/repositories/post_repo.js';
+import * as feedRepo from '../data/repositories/feed_repo.js'
 import UserRepo from '../data/repositories/user_repo.js';
 
 class FeedController {
@@ -6,7 +6,6 @@ class FeedController {
         try {
             const uid = req.headers.uid
             const viewedPostIds = req.body.viewedPostIds
-            const postRepo = new PostRepo()
             const userRepo = new UserRepo()
             const flag = await userRepo.userExists(uid)
             if(!flag) {
@@ -14,7 +13,7 @@ class FeedController {
                     message: 'No user exists',
                 })
             }
-            const postIds = await postRepo.getNewsFeed(uid, viewedPostIds);
+            const postIds = await feedRepo.getActivityFeed(uid, viewedPostIds);
             res.send({ postIds })
         } catch (error) {
             console.log(error)
